@@ -484,7 +484,7 @@ Reason: the format-arguments were incorrect.~%")
 	   (format t "Errors detected in this test: ~s " *test-errors*)
 	   (unless (zerop *test-unexpected-failures*)
 	     (format t "UNEXPECTED: ~s" *test-unexpected-failures*))
-	   (format t "~%Successes this test:~s~%" *test-successes*)
+	   (format t "~%Successes this test: ~s~%" *test-successes*)
 	   (setf (sys:gsgc-switch :print) state))))))
 
 (provide :tester #+module-versions 1.1)
