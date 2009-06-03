@@ -3,7 +3,7 @@
 ;;
 ;; copyright (c) 1985-1986 Franz Inc, Alameda, CA
 ;; copyright (c) 1986-2005 Franz Inc, Berkeley, CA  - All rights reserved.
-;; copyright (c) 2002-2007 Franz Inc, Oakland, CA - All rights reserved.
+;; copyright (c) 2002-2009 Franz Inc, Oakland, CA - All rights reserved.
 ;;
 ;; This code is free software; you can redistribute it and/or
 ;; modify it under the terms of the version 2.1 of
@@ -16,11 +16,6 @@
 ;; but without any warranty; without even the implied warranty of
 ;; merchantability or fitness for a particular purpose.  See the GNU
 ;; Lesser General Public License for more details.
-;;
-;;;; from the original ACL 6.1 sources:
-;; Id: tester.cl,v 2.2.12.1 2001/06/05 18:45:10 layer Exp
-
-;; $Id: tester.cl,v 2.7 2007/04/17 21:27:40 layer Exp $
 
 (defpackage :util.test
   (:use :common-lisp :excl)
