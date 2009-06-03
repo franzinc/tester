@@ -3,7 +3,7 @@
 (asdf:defsystem :tester
     :description "A test harness for Common Lisp."
     :author "Kevin Layer <layer@franz.com>"
-    :license "LLGPL"
+    :license "LLGPL (http://opensource.franz.com/preamble.html)"
     :components ((:static-file "readme.txt")
 		 (:file "tester")))
 
