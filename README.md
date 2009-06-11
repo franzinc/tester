@@ -56,8 +56,8 @@ Configuration
 
 See the documentation link below.
 
-Usage Documentation
--------------------
+Documentation
+-------------
 
 [Test Harness Documentation]
 (http://www.franz.com/support/documentation/current/doc/test-harness.htm)
@@ -65,11 +65,11 @@ Usage Documentation
 License
 -------
 
-The test source code is licensed under the terms of the Lisp
-Lesser GNU Public License, known as the LLGPL. The LLGPL consists
-of a preamble and the LGPL. Where these conflict, the preamble
-takes precedence. test is referenced in the preamble as the
-LIBRARY.
+The tester source code is licensed under the terms of the 
+[Lisp Lesser GNU Public License](http://opensource.franz.com/preamble.html), 
+known as the LLGPL. The LLGPL consists of a preamble and the LGPL. Where these 
+conflict, the preamble takes precedence.  This project is referenced in the 
+preamble as the LIBRARY.
 
 Notes
 -----
@@ -77,7 +77,7 @@ Notes
 There are more notes about tester in the link provided in the
 documentation section above.
 
-For an acl-compat version suitable for running in non-acl Common-Lisps
+For an acl-compat version suitable for running in non-acl Common Lisps
 see Kevin Rosenberg's ptester repository:
 
     git://git.b9.com/ptester.git/
@@ -85,7 +85,7 @@ see Kevin Rosenberg's ptester repository:
 Examples and Information
 ------------------------
 
-See section 1.3 of the documentation link in #8 above.
+See the link in the documentation section above.
 
 Open Source
 -----------
