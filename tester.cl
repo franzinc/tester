@@ -3,7 +3,7 @@
 ;;
 ;; copyright (c) 1985-1986 Franz Inc, Alameda, CA
 ;; copyright (c) 1986-2005 Franz Inc, Berkeley, CA  - All rights reserved.
-;; copyright (c) 2002-2009 Franz Inc, Oakland, CA - All rights reserved.
+;; copyright (c) 2002-2011 Franz Inc, Oakland, CA - All rights reserved.
 ;;
 ;; This code is free software; you can redistribute it and/or
 ;; modify it under the terms of the version 2.1 of
@@ -27,6 +27,7 @@
    #:*test-errors*
    #:*test-successes*
    #:*test-unexpected-failures*
+   #:*test-report-thread*
 
 ;;;; The test macros:
    #:test
@@ -36,24 +37,95 @@
    #:test-no-warning
    
    #:with-tests
+   #:inc-test-counter
    ))
 
 (in-package :util.test)
+
+    
 
 (defvar *break-on-test-failures* nil
   "When a test failure occurs, common-lisp:break is called, allowing
 interactive debugging of the failure.")
 
 (defvar *test-errors* 0
-  "The value is the number of test errors which have occurred.")
+  "The value is the number of test errors which have occurred.
+
+If an application increments or decrements this variable, it should 
+use the inc-test-counter macro instead of incf or decf.
+")
 (defvar *test-successes* 0
-  "The value is the number of test successes which have occurred.")
+  "The value is the number of test successes which have occurred.
+
+If an application increments or decrements this variable, it should 
+use the inc-test-counter macro instead of incf or decf.
+")
 (defvar *test-unexpected-failures* 0
-  "The value is the number of unexpected test failures which have occurred.")
+  "The value is the number of unexpected test failures which have occurred.
+
+If an application increments or decrements this variable, it should 
+use the inc-test-counter macro instead of incf or decf.
+")
 
 (defvar *error-protect-tests* nil
   "Protect each test from errors.  If an error occurs, then that will be
 taken as a test failure unless test-error is being used.")
+
+(defvar *test-report-thread* nil
+  "When non-nil, include the process-name and thread id in messages.")
+
+
+(defmacro report-error ((&key (stream '*error-output*)) &body body)
+  ;; internal macro
+  #-smp-macros
+  `(progn (report-thread ,stream) ,@body)
+  #+smp-macros
+  `(with-locked-stream (,stream)
+     (report-thread ,stream)
+     ,@body)
+  )
+
+(defun report-thread (stream)
+  ;; internal utility
+  (when *test-report-thread*
+    (format stream "~&~%***** test report from ~A[~A] *****~%"
+	    (mp:process-name  mp:*current-process*)
+	    (sys::thread-bindstack-index
+	     (mp:process-thread mp:*current-process*)))))
+
+(defmacro inc-test-counter (var &optional (increment 1))
+  " This macro is used internally to increment the three counters
+used by the tester.  Applications that explicitly increment the
+counters should also use this macro instead of incf or decf.
+
+The macro is necessary because the global counters must be updated 
+atomically in a multi-threaded application running in SMP
+implementations of ACL.  If the counters are bound on the stack, 
+they must be updated as ordinary special variables.
+"
+
+  ;; This is safe in virtual threads or in os-threads with a locked heap.
+  #-smp
+  `(incf ,var ,increment)
+
+  ;; In smp we need to be more careful.
+  #+smp
+  `(inc-test-counter-fn ',var ,increment)
+
+  )
+
+#+smp
+(defun inc-test-counter-fn (var increment)
+  ;; internal function
+  (multiple-value-bind (val status)
+      (mp:symeval-in-process var mp:*current-process*)
+    (declare (ignore val))
+    (if (null status)
+	;; A global counter must be updated atomically.
+	(incf-atomic (sys:global-symbol-value var) increment)
+      ;; A stack-bound counter is only seen in one thread.
+      (incf (symbol-value var) increment))))
+
 
 (defmacro test-values-errorset (form &optional announce catch-breaks)
   ;; internal macro
@@ -67,9 +139,10 @@ taken as a test failure unless test-error is being used.")
 		     (typep condition 'simple-break))
 	      then (break condition)
 	    elseif ,g-announce
-	      then (format *error-output* "~&Condition type: ~a~%"
+	      then (report-error ()
+		   (format *error-output* "~&Condition type: ~a~%"
 			   (class-of condition))
-		   (format *error-output* "~&Message: ~a~%" condition))
+		   (format *error-output* "~&Message: ~a~%" condition)))
 	   condition)))))
 
 (defmacro test-values (form &optional announce catch-breaks)
@@ -321,8 +394,12 @@ discriminate on new versus known failures."
 		   &aux fail predicate-failed got wanted)
   ;; for debugging large/complex test sets:
   (when *announce-test*
-    (format t "Just did test ~s~%" test-form)
-    (force-output))
+    (report-error ()
+	(format *error-output* "~&Just did test ~s~%" test-form))
+    (when (not (eq *error-output* *standard-output*))
+      (report-error (:stream *standard-output*)
+      (format t "~&Just did test ~s~%" test-form)
+      (force-output))))
   
   ;; this is an internal function
   (flet ((check (expected-result result)
@@ -359,10 +436,11 @@ discriminate on new versus known failures."
 	      (when (not (check (car got) (car want)))
 		(return (setq fail t)))))
     (if* fail
-       then (when (not known-failure)
+       then (report-error ()
+	    (when (not known-failure)
 	      (format *error-output*
 		      "~& * * * UNEXPECTED TEST FAILURE * * *~%")
-	      (incf *test-unexpected-failures*))
+	      (inc-test-counter *test-unexpected-failures*))
 	    (format *error-output* "~&Test failed: ~@[known failure: ~*~]~s~%"
 		    known-failure test-form)
 	    (if* (eq 'single-got-multiple fail)
@@ -447,17 +525,20 @@ Reason: the format-arguments were incorrect.~%")
 				       (cdr test-results))))))
 	    (when fail-info
 	      (format *error-output* "Additional info: ~a~%" fail-info))
-	    (incf *test-errors*)
+	    )
+	    (inc-test-counter *test-errors*)
 	    (when *break-on-test-failures*
 	      (break "~a is non-nil." '*break-on-test-failures*))
        else (when known-failure
+	      (report-error ()
 	      (format *error-output*
 		      "~&Expected test failure for ~s did not occur.~%"
 		      test-form)
 	      (when fail-info
 		(format *error-output* "Additional info: ~a~%" fail-info))
+	      )
 	      (setq fail t))
-	    (incf *test-successes*))
+	    (inc-test-counter *test-successes*))
     (not fail)))
 
 (defmacro with-tests ((&key (name "unnamed")) &body body)
@@ -467,17 +548,20 @@ Reason: the format-arguments were incorrect.~%")
 	     (*test-errors* 0)
 	     (*test-successes* 0)
 	     (*test-unexpected-failures* 0))
-	 (format *error-output* "Begin ~a test~%" ,g-name)
+	 (report-error ()
+	 (format *error-output* "Begin ~a test~%" ,g-name))
 	 (if* *break-on-test-failures*
 	    then (doit)
 	    else (handler-case (doit)
 		   (error (c)
+		     (report-error ()
 		     (format
 		      *error-output*
 		      "~
 ~&Test ~a aborted by signalling an uncaught error:~%~a~%"
-		      ,g-name c))))
+		      ,g-name c)))))
 	 (let ((state (sys:gsgc-switch :print)))
+	   (report-error (:stream *standard-output*)
 	   (setf (sys:gsgc-switch :print) nil)
 	   (format t "~&**********************************~%" ,g-name)
 	   (format t "End ~a test~%" ,g-name)
@@ -487,6 +571,6 @@ Reason: the format-arguments were incorrect.~%")
                  ((plusp *test-errors*)
                   (format t "(all known failures)")))
 	   (format t "~%Successes this test: ~s~%" *test-successes*)
-	   (setf (sys:gsgc-switch :print) state))))))
+	   (setf (sys:gsgc-switch :print) state)))))))
 
 (provide :tester #+module-versions 1.1)
