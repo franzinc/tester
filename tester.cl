@@ -44,7 +44,6 @@
 
     
 
-
 (defvar *break-on-test-failures* nil
   "When a test failure occurs, common-lisp:break is called, allowing
 interactive debugging of the failure.")
@@ -527,7 +526,7 @@ Reason: the format-arguments were incorrect.~%")
 	    (when fail-info
 	      (format *error-output* "Additional info: ~a~%" fail-info))
 	    )
-	    (inc-test-counter *test-errors*)
+	    (incf *test-errors*)
 	    (when *break-on-test-failures*
 	      (break "~a is non-nil." '*break-on-test-failures*))
        else (when known-failure
