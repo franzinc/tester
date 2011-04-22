@@ -80,7 +80,7 @@ taken as a test failure unless test-error is being used.")
   #-smp-macros
   `(progn (report-thread ,stream) ,@body)
   #+smp-macros
-  `(with-locked-stream (,stream)
+  `(with-locked-stream (,stream :non-smp :without-scheduling)
      (report-thread ,stream)
      ,@body)
   )
