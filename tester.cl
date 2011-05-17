@@ -118,7 +118,7 @@ they must be updated as ordinary special variables.
 (defun inc-test-counter-fn (var increment)
   ;; internal function
   (multiple-value-bind (val status)
-      (mp:symeval-in-process var mp:*current-process*)
+      (excl::symeval-in-thread var (excl::current-thread)) ;; [bug20172]
     (declare (ignore val))
     (if (null status)
 	;; A global counter must be updated atomically.
