@@ -75,8 +75,11 @@ taken as a test failure unless test-error is being used.")
   (when *test-report-thread*
     (format stream "~&~%***** test report from ~A[~A] *****~%"
 	    (mp:process-name  mp:*current-process*)
+	    #-(version>= 10 1)    ;; bug24565
 	    (sys::thread-bindstack-index
-	     (mp:process-thread mp:*current-process*)))))
+	     (mp:process-thread mp:*current-process*))
+	    #+(version>= 10 1)
+	    (mp:process-sequence mp:*current-process*))))  ;; bug24565
 
 (defmacro inc-test-counter (var &optional (increment 1))
   " This macro is used internally to increment the three counters
