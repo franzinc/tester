@@ -25,6 +25,10 @@
    #:inc-test-counter
    ))
 
+;; For forward references to symbols in this package, since this
+;; module is processed before the one that defines the :test package.
+#+allegro (defpackage :test)
+
 (in-package :util.test)
 
     
@@ -128,9 +132,9 @@ they must be updated as ordinary special variables.
 	      then (break condition)
 	    elseif ,g-announce
 	      then (report-error ()
-		   (format *error-output* "~&Condition type: ~a~%"
-			   (class-of condition))
-		   (format *error-output* "~&Message: ~a~%" condition)))
+		     (format *error-output* "~&Condition type: ~a~%"
+			     (class-of condition))
+		     (format *error-output* "~&Message: ~a~%" condition)))
 	   condition)))))
 
 (defmacro test-values (form &optional announce catch-breaks)
@@ -383,11 +387,11 @@ discriminate on new versus known failures."
   ;; for debugging large/complex test sets:
   (when *announce-test*
     (report-error ()
-	(format *error-output* "~&Just did test ~s~%" test-form))
+      (format *error-output* "~&Just did test ~s~%" test-form))
     (when (not (eq *error-output* *standard-output*))
       (report-error (:stream *standard-output*)
-      (format t "~&Just did test ~s~%" test-form)
-      (force-output))))
+	(format t "~&Just did test ~s~%" test-form)
+	(force-output))))
   
   ;; this is an internal function
   (flet ((check (expected-result result)
@@ -425,106 +429,106 @@ discriminate on new versus known failures."
 		(return (setq fail t)))))
     (if* fail
        then (report-error ()
-	    (when (not known-failure)
-	      (format *error-output*
-		      "~& * * * UNEXPECTED TEST FAILURE * * *~%")
-	      (inc-test-counter *test-unexpected-failures*))
-	    (format *error-output* "~&Test failed: ~@[known failure: ~*~]~s~%"
-		    known-failure test-form)
-	    (if* (eq 'single-got-multiple fail)
-	       then (format
-		     *error-output*
-		     "~
+	      (when (not known-failure)
+		(format *error-output*
+			"~& * * * UNEXPECTED TEST FAILURE * * *~%")
+		(inc-test-counter *test-unexpected-failures*))
+	      (format *error-output* "~&Test failed: ~@[known failure: ~*~]~s~%"
+		      known-failure test-form)
+	      (if* (eq 'single-got-multiple fail)
+		 then (format
+		       *error-output*
+		       "~
 Reason: additional value were returned from test form.~%")
-	     elseif predicate-failed
-	       then (format *error-output* "Reason: predicate error.~%")
-	     elseif (null (car test-results))
-	       then (format *error-output* "~
+	       elseif predicate-failed
+		 then (format *error-output* "Reason: predicate error.~%")
+	       elseif (null (car test-results))
+		 then (format *error-output* "~
 Reason: an error~@[ (of type `~s')~] was detected.~%"
-			    (when condition (class-of condition)))
-	     elseif condition
-	       then (if* (not (conditionp condition))
-		       then (format *error-output* "~
+			      (when condition (class-of condition)))
+	       elseif condition
+		 then (if* (not (conditionp condition))
+			 then (format *error-output* "~
 Reason: expected but did not detect an error of type `~s'.~%"
-				    condition-type)
-		     elseif (null condition-type)
-		       then (format *error-output* "~
+				      condition-type)
+		       elseif (null condition-type)
+			 then (format *error-output* "~
 Reason: detected an unexpected error of type `~s':
         ~a.~%"
-				    (class-of condition)
-				    condition)
-		     elseif (not (if* include-subtypes
-				    then (typep condition condition-type)
-				    else (eq (class-of condition)
-					     (find-class condition-type))))
-		       then (format *error-output* "~
+				      (class-of condition)
+				      condition)
+		       elseif (not (if* include-subtypes
+				      then (typep condition condition-type)
+				      else (eq (class-of condition)
+					       (find-class condition-type))))
+			 then (format *error-output* "~
 Reason: detected an incorrect condition type.~%")
-			    (format *error-output*
-				    "  wanted: ~s~%" condition-type)
-			    (format *error-output*
-				    "     got: ~s~%" (class-of condition))
-		     elseif (and format-control
-				 (not (string=
-				       (setq got
-					 (concatenate 'simple-string
-					   "~1@<" format-control "~:@>"))
-				       (setq wanted
-					 (simple-condition-format-control
-					  condition)))))
-		       then ;; format control doesn't match
-			    (format *error-output* "~
+			      (format *error-output*
+				      "  wanted: ~s~%" condition-type)
+			      (format *error-output*
+				      "     got: ~s~%" (class-of condition))
+		       elseif (and format-control
+				   (not (string=
+					 (setq got
+					   (concatenate 'simple-string
+					     "~1@<" format-control "~:@>"))
+					 (setq wanted
+					   (simple-condition-format-control
+					    condition)))))
+			 then ;; format control doesn't match
+			      (format *error-output* "~
 Reason: the format-control was incorrect.~%")
-			    (format *error-output* "  wanted: ~s~%" wanted)
-			    (format *error-output* "     got: ~s~%" got)
-		     elseif (and format-arguments
-				 (not (equal
-				       (setq got format-arguments)
-				       (setq wanted
-					 (simple-condition-format-arguments
-					  condition)))))
-		       then (format *error-output* "~
+			      (format *error-output* "  wanted: ~s~%" wanted)
+			      (format *error-output* "     got: ~s~%" got)
+		       elseif (and format-arguments
+				   (not (equal
+					 (setq got format-arguments)
+					 (setq wanted
+					   (simple-condition-format-arguments
+					    condition)))))
+			 then (format *error-output* "~
 Reason: the format-arguments were incorrect.~%")
-			    (format *error-output* "  wanted: ~s~%" wanted)
-			    (format *error-output* "     got: ~s~%" got)
-		       else ;; what else????
-			    (error "internal-error"))
-	       else (let ((*print-length* 50)
-			  (*print-level* 10))
-		      (if* wanted-message
-			 then (format *error-output*
-				      "  wanted: ~a~%" wanted-message)
-			 else (if* (not multiple-values)
-				 then (format *error-output*
-					      "  wanted: ~s~%"
-					      expected-result)
-				 else (format
-				       *error-output*
-				       "  wanted values: ~{~s~^, ~}~%"
-				       expected-result)))
-		      (if* got-message
-			 then (format *error-output*
-				      "     got: ~a~%" got-message)
-			 else (if* (not multiple-values)
-				 then (format *error-output* "     got: ~s~%"
-				       (second test-results))
-				 else (format
-				       *error-output*
-				       "     got values: ~{~s~^, ~}~%"
-				       (cdr test-results))))))
-	    (when fail-info
-	      (format *error-output* "Additional info: ~a~%" fail-info))
-	    )
+			      (format *error-output* "  wanted: ~s~%" wanted)
+			      (format *error-output* "     got: ~s~%" got)
+			 else ;; what else????
+			      (error "internal-error"))
+		 else (let ((*print-length* 50)
+			    (*print-level* 10))
+			(if* wanted-message
+			   then (format *error-output*
+					"  wanted: ~a~%" wanted-message)
+			   else (if* (not multiple-values)
+				   then (format *error-output*
+						"  wanted: ~s~%"
+						expected-result)
+				   else (format
+					 *error-output*
+					 "  wanted values: ~{~s~^, ~}~%"
+					 expected-result)))
+			(if* got-message
+			   then (format *error-output*
+					"     got: ~a~%" got-message)
+			   else (if* (not multiple-values)
+				   then (format *error-output* "     got: ~s~%"
+						(second test-results))
+				   else (format
+					 *error-output*
+					 "     got values: ~{~s~^, ~}~%"
+					 (cdr test-results))))))
+	      (when fail-info
+		(format *error-output* "Additional info: ~a~%" fail-info))
+	      )
 	    (incf *test-errors*)
 	    (when *break-on-test-failures*
 	      (break "~a is non-nil." '*break-on-test-failures*))
        else (when known-failure
 	      (report-error ()
-	      (format *error-output*
-		      "~&Expected test failure for ~s did not occur.~%"
-		      test-form)
-	      (when fail-info
-		(format *error-output* "Additional info: ~a~%" fail-info))
-	      )
+		(format *error-output*
+			"~&Expected test failure for ~s did not occur.~%"
+			test-form)
+		(when fail-info
+		  (format *error-output* "Additional info: ~a~%" fail-info))
+		)
 	      (setq fail t))
 	    (inc-test-counter *test-successes*))
     (not fail)))
@@ -537,28 +541,39 @@ Reason: the format-arguments were incorrect.~%")
 	     (*test-successes* 0)
 	     (*test-unexpected-failures* 0))
 	 (report-error ()
-	 (format *error-output* "Begin ~a test~%" ,g-name))
+	   (format *error-output* "Begin ~a test~%" ,g-name))
 	 (if* *break-on-test-failures*
 	    then (doit)
 	    else (handler-case (doit)
 		   (error (c)
 		     (report-error ()
-		     (format
-		      *error-output*
-		      "~
+		       (format
+			*error-output*
+			"~
 ~&Test ~a aborted by signalling an uncaught error:~%~a~%"
-		      ,g-name c)))))
+			,g-name c)))))
 	 (let ((state (sys:gsgc-switch :print)))
 	   (report-error (:stream *standard-output*)
-	   (setf (sys:gsgc-switch :print) nil)
-	   (format t "~&**********************************~%" ,g-name)
-	   (format t "End ~a test~%" ,g-name)
-	   (format t "Errors detected in this test: ~s " *test-errors*)
-	   (cond ((plusp *test-unexpected-failures*)
-                  (format t "UNEXPECTED: ~s" *test-unexpected-failures*))
-                 ((plusp *test-errors*)
-                  (format t "(all known failures)")))
-	   (format t "~%Successes this test: ~s~%" *test-successes*)
-	   (setf (sys:gsgc-switch :print) state)))))))
+	     (setf (sys:gsgc-switch :print) nil)
+	     (format t "~&**********************************~%" ,g-name)
+	     (format t "End ~a test~%" ,g-name)
+	     (format t "Errors detected in this test: ~s " *test-errors*)
+	     (cond ((plusp *test-unexpected-failures*)
+		    (format t "UNEXPECTED: ~s" *test-unexpected-failures*))
+		   ((plusp *test-errors*)
+		    (format t "(all known failures)")))
+	     (format t "~%Successes this test: ~s~%" *test-successes*)
+	     #+allegro
+	     (progn
+	       (incf test::.total-errors. *test-errors*)
+	       (incf test::.total-successes. *test-successes*)
+	       (incf test::.total-unexpected-failures.
+		     *test-unexpected-failures*))
+	     (setf (sys:gsgc-switch :print) state)))))))
 
 (provide :tester #+module-versions 1.1)
+
+;;; For Gnu Emacs.
+;;; Local Variables: ***
+;;; eval: (put 'report-error 'fi:common-lisp-indent-hook 1) ***
+;;; End: ***
