@@ -567,7 +567,7 @@ Reason: the format-arguments were incorrect.~%")
 	     (progn
 	       (incf test::.total-errors. *test-errors*)
 	       (incf test::.total-successes. *test-successes*)
-	       #+(version>= 10 0)
+	       #+(version>= 10 1)
 	       (incf test::.total-unexpected-failures.
 		     *test-unexpected-failures*))
 	     (setf (sys:gsgc-switch :print) state)))))))
