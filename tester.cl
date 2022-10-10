@@ -127,14 +127,15 @@ they must be updated as ordinary special variables.
 	    (,g-catch-breaks ,catch-breaks))
        (handler-case (cons t (multiple-value-list ,form))
 	 (condition (condition)
-	   (if* (and (null ,g-catch-breaks)
-		     (typep condition 'simple-break))
-	      then (break condition)
-	    elseif ,g-announce
-	      then (report-error ()
-		     (format *error-output* "~&Condition type: ~a~%"
-			     (class-of condition))
-		     (format *error-output* "~&Message: ~a~%" condition)))
+	   (with-unreachable-code-allowed
+	       (if* (and (null ,g-catch-breaks)
+			 (typep condition 'simple-break))
+		  then (break condition)
+		elseif ,g-announce
+		  then (report-error ()
+			 (format *error-output* "~&Condition type: ~a~%"
+				 (class-of condition))
+			 (format *error-output* "~&Message: ~a~%" condition))))
 	   condition)))))
 
 (defmacro test-values (form &optional announce catch-breaks)
@@ -248,29 +249,30 @@ message itself."
 	:predicate #'eq
 	:expected-result t
 	:test-results
-	(test-values (and (conditionp ,g-c)
-			  ,@(if* include-subtypes-given
-			       then `((if* ,g-include-subtypes
-					 then (typep ,g-c ,g-condition-type)
-					 else (eq (class-of ,g-c)
-						  (find-class
-						   ,g-condition-type))))
-			       else `((eq (class-of ,g-c)
-					  (find-class ,g-condition-type))))
-			  ,@(when format-control-given
-			      `((or
-				 (null ,g-format-control)
-				 (string=
-				  (concatenate 'simple-string
-				    "~1@<" ,g-format-control "~:@>")
-				  (simple-condition-format-control ,g-c)))))
-			  ,@(when format-arguments-given
-			      `((or
-				 (null ,g-format-arguments)
-				 (equal
-				  ,g-format-arguments
-				  (simple-condition-format-arguments ,g-c))))))
-		     t)
+	(with-unreachable-code-allowed
+	    (test-values (and (conditionp ,g-c)
+			      ,@(if* include-subtypes-given
+				   then `((if* ,g-include-subtypes
+					     then (typep ,g-c ,g-condition-type)
+					     else (eq (class-of ,g-c)
+						      (find-class
+						       ,g-condition-type))))
+				   else `((eq (class-of ,g-c)
+					      (find-class ,g-condition-type))))
+			      ,@(when format-control-given
+				  `((or
+				     (null ,g-format-control)
+				     (string=
+				      (concatenate 'simple-string
+					"~1@<" ,g-format-control "~:@>")
+				      (simple-condition-format-control ,g-c)))))
+			      ,@(when format-arguments-given
+				  `((or
+				     (null ,g-format-arguments)
+				     (equal
+				      ,g-format-arguments
+				      (simple-condition-format-arguments ,g-c))))))
+			 t))
 	:test-form ',form
 	,@(when fail-info-given `(:fail-info ,g-fail-info))
 	,@(when known-failure-given `(:known-failure ,g-known-failure))
