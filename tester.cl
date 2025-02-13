@@ -2,6 +2,12 @@
 ;; A test harness for Allegro CL.
 ;; See the file LICENSE for the full license governing this code.
 
+#+(version= 11 0)
+(sys:defpatch "tester" 1
+  "v1: fix compilation issues with util.test:with-tests."
+  :type :system
+  :post-loadable t)
+
 (defpackage :util.test
   (:use :common-lisp :excl)
   (:shadow #:test)
@@ -25,13 +31,22 @@
    #:inc-test-counter
    ))
 
-;; For forward references to symbols in this package, since this
-;; module is processed before the one that defines the :test package.
-#+allegro (defpackage :test)
-
 (in-package :util.test)
 
-    
+#+allegro
+(defvar *test-syms* nil)
+
+#+allegro
+(defun set-test-syms ()
+  ;; this can't be done at compile time because the :test package is
+  ;; defined after we are loaded.
+  (let ((p (find-package :test)))
+    (when (and (null *test-syms*) p)
+      (setq *test-syms*
+	(list (find-symbol (symbol-name :.total-errors.) p)
+	      (find-symbol (symbol-name :.total-successes.) p)
+	      #+(version>= 10 1)
+	      (find-symbol (symbol-name :.total-unexpected-failures.) p))))))
 
 (defvar *break-on-test-failures* nil
   "When a test failure occurs, common-lisp:break is called, allowing
@@ -536,6 +551,7 @@ Reason: the format-arguments were incorrect.~%")
     (not fail)))
 
 (defmacro with-tests ((&key (name "unnamed")) &body body)
+  #+allegro (set-test-syms)
   (let ((g-name (gensym)))
     `(flet ((doit () ,@body))
        (let ((,g-name ,name)
@@ -566,12 +582,17 @@ Reason: the format-arguments were incorrect.~%")
 		    (format t "(all known failures)")))
 	     (format t "~%Successes this test: ~s~%" *test-successes*)
 	     #+allegro
-	     (progn
-	       (incf test::.total-errors. *test-errors*)
-	       (incf test::.total-successes. *test-successes*)
+	     (when *test-syms*
+	       (set (first *test-syms*)
+		    (+ (symbol-value (first *test-syms*))
+		       *test-errors*))
+	       (set (second *test-syms*)
+		    (+ (symbol-value (second *test-syms*))
+		       *test-successes*))
 	       #+(version>= 10 1)
-	       (incf test::.total-unexpected-failures.
-		     *test-unexpected-failures*))
+	       (set (third *test-syms*)
+		    (+ (symbol-value (third *test-syms*))
+		       *test-unexpected-failures*)))
 	     (setf (sys:gsgc-switch :print) state)))))))
 
 (provide :tester #+module-versions 1.1)
