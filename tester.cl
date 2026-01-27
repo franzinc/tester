@@ -550,6 +550,7 @@ Reason: the format-arguments were incorrect.~%")
 	    (inc-test-counter *test-successes*))
     (not fail)))
 
+;; Use the new with-gc-verbosity macro for simplicity and regularity:
 (defmacro with-tests ((&key (name "unnamed")) &body body)
   #+allegro (set-test-syms)
   (let ((g-name (gensym)))
@@ -570,9 +571,8 @@ Reason: the format-arguments were incorrect.~%")
 			"~
 ~&Test ~a aborted by signalling an uncaught error:~%~a~%"
 			,g-name c)))))
-	 (let ((state (sys:gsgc-switch :print)))
-	   (report-error (:stream *standard-output*)
-	     (setf (sys:gsgc-switch :print) nil)
+	 (report-error (:stream *standard-output*)
+	   (with-gc-verbosity (:quiet)
 	     (format t "~&**********************************~%" ,g-name)
 	     (format t "End ~a test~%" ,g-name)
 	     (format t "Errors detected in this test: ~s " *test-errors*)
@@ -592,8 +592,7 @@ Reason: the format-arguments were incorrect.~%")
 	       #+(version>= 10 1)
 	       (set (third *test-syms*)
 		    (+ (symbol-value (third *test-syms*))
-		       *test-unexpected-failures*)))
-	     (setf (sys:gsgc-switch :print) state)))))))
+		       *test-unexpected-failures*)))))))))
 
 (provide :tester #+module-versions 1.1)
 
