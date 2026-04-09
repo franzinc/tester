@@ -572,7 +572,7 @@ Reason: the format-arguments were incorrect.~%")
 ~&Test ~a aborted by signalling an uncaught error:~%~a~%"
 			,g-name c)))))
 	 (report-error (:stream *standard-output*)
-	   (with-gc-verbosity (:quiet)
+	   (excl::with-gc-verbosity (:quiet)
 	     (format t "~&**********************************~%" ,g-name)
 	     (format t "End ~a test~%" ,g-name)
 	     (format t "Errors detected in this test: ~s " *test-errors*)
